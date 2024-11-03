@@ -1,0 +1,467 @@
+---
+title: "PN_Scoring_Study_Complete"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(httr)
+library(httr2)
+library(stringi)
+library(claudeR)
+
+```
+
+```{r}
+
+# loading functions for analyses
+# source("gpt_study_master_functions.R")
+
+# Expecting a point array; extracts it and sums it.
+# source("gpt_study_master_functions_brackets.R")
+
+### Models tested in study
+
+## OpenAI / ChatGPT API
+## "gpt-3.5-turbo"; "gpt-4o"; "gpt-4o-mini"
+
+## Anthropic / Claude API
+## "claude-3-5-sonnet-20240620"; "claude-3-haiku-20240307"
+
+## Google / Gemini API
+## "gemini-1.5-pro"; "gemini-1.5-flash" (similar to 4o and 4o-mini)   
+
+# loading API keys; not included in supplementary materials because 
+# they are unique to the user and incur costs with use
+# interested researchers can sign up for their own
+source("api_keys.R")
+
+#######
+# PNs #
+#######
+note1 <- readLines("note1.txt")
+note2 <- readLines("note2.txt")
+note3 <- readLines("note3.txt")
+note4 <- readLines("note4.txt")
+note5 <- readLines("note5.txt")
+
+# loading rubric
+analytic_rubric <- paste(readLines("analytic_rubric_new0.txt"), collapse = " ")
+
+###########
+# Prompts #
+###########
+
+### Simple Prompt
+simple_prompt <- paste(readLines("simple_prompt.txt"), collapse = " ")
+
+### Chain-of-thought
+chain_of_thought_prompt <- paste(readLines("chain_of_thought_prompt.txt"), collapse = " ")  
+
+### Two-step Prompt
+two_step_step1_prompt <- paste(readLines("two_step_first_prompt.txt"), collapse = " ")
+two_step_step2_prompt <- paste(readLines("two_step_second_prompt.txt"), collapse = " ")
+
+### Two-step Prompt with External Calculation
+first_bracket_prompt <- paste(readLines("external_calculation_first_prompt.txt"), collapse = " ")
+second_bracket_prompt <- paste(readLines("external_calculation_second_prompt.txt"), collapse = " ")
+
+# Change below to where you want files saved
+############################################################
+# This must be specified or the results will not be saved! #
+############################################################
+save_path <- ""
+
+```
+
+
+```{r}
+
+# Simple approach prompts for all 5 notes
+note_1_simple_prompt <- paste0(simple_prompt, analytic_rubric, "NOTE:", note1)
+note_2_simple_prompt <- paste0(simple_prompt, analytic_rubric, "NOTE:", note2)
+note_3_simple_prompt <- paste0(simple_prompt, analytic_rubric, "NOTE:", note3)
+note_4_simple_prompt <- paste0(simple_prompt, analytic_rubric, "NOTE:", note4)
+note_5_simple_prompt <- paste0(simple_prompt, analytic_rubric, "NOTE:", note5)
+
+# Repeat above for other notes:
+
+# Chain of thought 
+note_1_chain_of_thought_prompt <- paste0(chain_of_thought_prompt, analytic_rubric, "NOTE:", note1)
+
+# Two-step Prompt
+note_1_two_step_step1_prompt <- paste0(two_step_step1, analytic_rubric, "NOTE:", note1)
+
+
+# Two-step Prompt with External Calculation
+note_1_bracket_prompt <- paste0(first_bracket_prompt, analytic_rubric, "NOTE:", note1)
+
+```
+
+```{r}
+
+# Reduces redundant code; could be further reduced
+# Depends on having "gpt_study_master_functions.R" loaded
+# Used for simple and cot prompts
+
+#####
+
+run_openai <- function(gpt_model, prompt1, temp1 = 1,
+                       two_step = FALSE, temp2 = NA, prompt2 = NA,
+                       note_number, prompt_name, temp_name) {
+
+  note_result <- replicate(100,
+                           hey_openai(gpt_model = gpt_model, prompt1 = prompt1,
+                                      temp1 = temp1, two_step = two_step,
+                                      temp2 = temp2, prompt2 = prompt2),
+                           simplify = FALSE)
+
+  note_df <- do.call(rbind, note_result)
+  save(note_df, file = paste0(save_path, prompt_name, "_", gpt_model, "_", temp_name, "_temp",
+                              "_note", note_number,  "_df.Rdata"))
+}
+
+run_anthropic <- function(gpt_model, prompt1, temp1 = 1,
+                          two_step = FALSE, temp2 = NA, prompt2 = NA,
+                          note_number, prompt_name, temp_name) {
+
+  note_result <- replicate(100,
+                           hey_anthropic(gpt_model = gpt_model, prompt1 = prompt1, temp1 = temp1,
+                                      two_step = two_step, temp2 = temp2, prompt2 = prompt2),
+                           simplify = FALSE)
+
+  note_df <- do.call(rbind, note_result)
+  save(note_df, file = paste0(save_path, prompt_name, "_", gpt_model, "_", temp_name, "_temp",
+                              "_note", note_number,  "_df.Rdata"))
+}
+
+run_google <- function(gpt_model, prompt1, temp1 = 1,
+                       two_step = FALSE, temp2 = NA, prompt2 = NA,
+                       note_number, prompt_name, temp_name) {
+
+  note_result <- replicate(100,
+                           hey_google(gpt_model = gpt_model, prompt1 = prompt1, temp1 = temp1,
+                                      two_step = two_step, temp2 = temp2, prompt2 = prompt2),
+                           simplify = FALSE)
+
+  note_df <- do.call(rbind, note_result)
+  save(note_df, file = paste0(save_path, prompt_name, "_", gpt_model, "_", temp_name, "_temp",
+                              "_note", note_number,  "_df.Rdata"))
+}
+
+## OpenAI / ChatGPT API
+## "gpt-3.5-turbo"; "gpt-4o"; "gpt-4o-mini"
+
+## Anthropic / Claude API
+## "claude-3-5-sonnet-20240620"; "claude-3-haiku-20240307" (similar to 4o and 4o-mini) 
+
+## Google / Gemini API
+## "gemini-1.5-pro"; "gemini-1.5-flash" (similar to 4o and 4o-mini) 
+
+```
+
+```{r}
+
+# Reduces redundant code; could be further reduced
+# Depends on having "gpt_study_master_functions_bracket.R" loaded
+# used for external calculation prompt
+# originally named "point_array" (pa) when working
+
+#####
+
+run_openai_pa <- function(gpt_model, prompt1, temp1 = 1,
+                       two_step = FALSE, temp2 = NA, prompt2 = NA,
+                       note_number, prompt_name, temp_name) {
+
+  note_result <- replicate(100,
+                           hey_openai_point_array(
+                             gpt_model = gpt_model, prompt1 = prompt1,
+                             temp1 = temp1, two_step = two_step,
+                             temp2 = temp2, prompt2 = prompt2),
+                           simplify = FALSE)
+
+  note_df <- do.call(rbind, note_result)
+  save(note_df, file = paste0(save_path, prompt_name, "_", gpt_model, "_", temp_name, "_temp",
+                              "_note", note_number,  "_df.Rdata"))
+}
+
+run_anthropic_pa <- function(gpt_model, prompt1, temp1 = 1,
+                           two_step = FALSE, temp2 = NA, prompt2 = NA,
+                           note_number, prompt_name, temp_name) {
+
+  note_result <- replicate(100,
+                           hey_anthropic_point_array(
+                             gpt_model = gpt_model, prompt1 = prompt1, temp1 = temp1,
+                             two_step = two_step, temp2 = temp2, prompt2 = prompt2),
+                             simplify = FALSE)
+
+  note_df <- do.call(rbind, note_result)
+  save(note_df, file = paste0(save_path, prompt_name, "_", gpt_model, "_", temp_name, "_temp",
+                              "_note", note_number,  "_df.Rdata"))
+}
+
+run_google_pa <- function(gpt_model, prompt1, temp1 = 1,
+                        two_step = FALSE, temp2 = NA, prompt2 = NA,
+                        note_number, prompt_name, temp_name) {
+
+  note_result <- replicate(100,
+                           hey_google_point_array(
+                             gpt_model = gpt_model, prompt1 = prompt1, temp1 = temp1,
+                             two_step = two_step, temp2 = temp2, prompt2 = prompt2),
+                           simplify = FALSE)
+
+  note_df <- do.call(rbind, note_result)
+  save(note_df, file = paste0(save_path, prompt_name, "_", gpt_model, "_", temp_name, "_temp",
+                              "_note", note_number,  "_df.Rdata"))
+}
+
+
+
+```
+
+
+```{r, eval = FALSE}
+
+############################################# 
+# Condition 1 - Simple Prompt, Default Temp #
+#############################################
+
+### GPT-3.5
+# Example for all 5 notes
+# 3.5, all 5 notes
+# run_openai(gpt_model = "gpt-3.5-turbo", prompt1 = note_1_simple_prompt, note_number = 1, prompt_name = "simple", temp_name = "default")
+# Sys.sleep(60)
+# run_openai(gpt_model = "gpt-3.5-turbo", prompt1 = note_2_simple_prompt, note_number = 2, prompt_name = "simple", temp_name = "default")
+# Sys.sleep(60)
+# run_openai(gpt_model = "gpt-3.5-turbo", prompt1 = note_3_simple_prompt, note_number = 3, prompt_name = "simple", temp_name = "default")
+# Sys.sleep(60)
+# run_openai(gpt_model = "gpt-3.5-turbo", prompt1 = note_4_simple_prompt, note_number = 4, prompt_name = "simple", temp_name = "default")
+# Sys.sleep(60)
+# run_openai(gpt_model = "gpt-3.5-turbo", prompt1 = note_5_simple_prompt, note_number = 5, prompt_name = "simple", temp_name = "default")
+# Sys.sleep(60)
+
+### GPT-4o, all 5 notes
+# run_openai(gpt_model = "gpt-4o", prompt1 = note_1_simple_prompt, note_number = 1, prompt_name = "simple", temp_name = "default")
+# Sys.sleep(60)
+# run_openai(gpt_model = "gpt-4o", prompt1 = note_2_simple_prompt, note_number = 2, prompt_name = "simple", temp_name = "default")
+# Sys.sleep(60)
+# run_openai(gpt_model = "gpt-4o", prompt1 = note_3_simple_prompt, note_number = 3, prompt_name = "simple", temp_name = "default")
+# Sys.sleep(60)
+# run_openai(gpt_model = "gpt-4o", prompt1 = note_4_simple_prompt, note_number = 4, prompt_name = "simple", temp_name = "default")
+# Sys.sleep(60)
+# run_openai(gpt_model = "gpt-4o", prompt1 = note_5_simple_prompt, note_number = 5, prompt_name = "simple", temp_name = "default")
+# Sys.sleep(60)
+
+```
+
+
+```{r, eval = FALSE}
+
+######################################### 
+# Condition 2 - Simple Prompt, Low Temp #
+#########################################
+
+# Only syntax for the first note will be included for space considerations
+# Only need to change the "prompt1" argument for other notes
+
+# 3.5, all 5 notes
+run_openai(gpt_model = "gpt-3.5-turbo", prompt1 = note_1_simple_prompt, temp1 = 0.05, note_number = 1, prompt_name = "simple", temp_name = "low")
+Sys.sleep(60)
+
+# 4o, all 5 notes
+run_openai(gpt_model = "gpt-4o", prompt1 = note_1_simple_prompt, temp1 = 0.05, note_number = 1, prompt_name = "simple", temp_name = "low")
+Sys.sleep(60)
+
+```
+
+
+```{r, eval = FALSE}
+
+####################################################### 
+# Condition 3 - Chain of Thought Prompt, Default Temp #
+#######################################################
+
+# 4o, all 5 notes
+run_openai(gpt_model = "gpt-4o", prompt1 = note_1_chain_of_thought_prompt, note_number = 1, prompt_name = "chain_of_thought", temp_name = "default")
+Sys.sleep(60)
+
+```
+
+
+```{r, eval = FALSE}
+
+################################################### 
+# Condition 4 - Chain of Thought Prompt, Low Temp #
+###################################################
+
+# 4o, all 5 notes
+run_openai(gpt_model = "gpt-4o", prompt1 = note_1_chain_of_thought_prompt, temp1 = 0.05,
+           note_number = 1, prompt_name = "chain_of_thought", temp_name = "low")
+Sys.sleep(60)
+
+
+```
+
+
+```{r, message = FALSE, warning = FALSE, eval = FALSE}
+
+############################################### 
+# Condition 5 - Two Step Prompt, Default Temp #
+###############################################
+
+# GPT 4o
+run_openai(gpt_model = "gpt-4o", prompt1 = note_1_revised_cot_prompt,
+           two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+           note_number = 1, prompt_name = "twostep", temp_name = "default")
+Sys.sleep(60)
+
+
+# GPT 4o mini
+run_openai(gpt_model = "gpt-4o-mini", prompt1 = note_1_revised_cot_prompt,
+           two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+           note_number = 1, prompt_name = "twostep", temp_name = "default")
+Sys.sleep(60)
+
+####################
+# Anthropic Models #
+####################
+
+# Claude Sonnet (similar to GPT 4o); "claude-3-5-sonnet-20240620"
+run_anthropic(gpt_model = "claude-3-5-sonnet-20240620", prompt1 = note_1_revised_cot_prompt,
+           two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+           note_number = 1, prompt_name = "twostep", temp_name = "default")
+Sys.sleep(60)
+
+
+# Claude Haiku (similar to GPT 4o mini): "claude-3-haiku-20240307"
+run_anthropic(gpt_model = "claude-3-haiku-20240307", prompt1 = note_1_revised_cot_prompt,
+           two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+           note_number = 1, prompt_name = "twostep", temp_name = "default")
+Sys.sleep(60)
+
+#################
+# Google Models #
+#################
+
+# Gemini Pro (similar to GPT 4o); "gemini-1.5-pro"
+run_google(gpt_model = "gemini-1.5-pro", prompt1 = note_1_revised_cot_prompt,
+           two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+           note_number = 1, prompt_name = "twostep", temp_name = "default")
+Sys.sleep(60)
+
+# Sys.sleep(60)
+
+# Gemini Flash (similar to GPT 4o mini); "gemini-1.5-flash"
+run_google(gpt_model = "gemini-1.5-flash", prompt1 = note_1_revised_cot_prompt,
+           two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+           note_number = 1, prompt_name = "twostep", temp_name = "default")
+Sys.sleep(60)
+
+
+```
+
+
+```{r, message = FALSE, warning = FALSE, eval = FALSE}
+
+########################################### 
+# Condition 6 - Two Step Prompt, Low Temp #
+###########################################
+
+# GPT 4o
+run_openai(gpt_model = "gpt-4o", prompt1 = note_1_revised_cot_prompt, temp1 = 0.05,
+           two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+           note_number = 1, prompt_name = "twostep", temp_name = "low")
+Sys.sleep(60)
+
+# GPT 4o mini
+run_openai(gpt_model = "gpt-4o-mini", prompt1 = note_1_revised_cot_prompt, temp1 = 0.05,
+           two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+           note_number = 1, prompt_name = "twostep", temp_name = "low")
+Sys.sleep(60)
+
+
+## Anthropic Models
+
+# Claude Sonnet (similar to GPT 4o); "claude-3-5-sonnet-20240620"
+run_anthropic(gpt_model = "claude-3-5-sonnet-20240620", prompt1 = note_1_revised_cot_prompt, temp1 = 0.05,
+              two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+              note_number = 1, prompt_name = "twostep", temp_name = "low")
+Sys.sleep(60)
+
+# Claude Haiku (similar to GPT 4o mini): "claude-3-haiku-20240307"
+run_anthropic(gpt_model = "claude-3-haiku-20240307", prompt1 = note_1_revised_cot_prompt, temp1 = 0.05,
+              two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+              note_number = 1, prompt_name = "twostep", temp_name = "low")
+Sys.sleep(60)
+
+
+## Google Models
+
+# Gemini Pro (similar to GPT 4o); "gemini-1.5-pro"
+run_google(gpt_model = "gemini-1.5-pro", prompt1 = note_1_revised_cot_prompt, temp1 = 0.05,
+           two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+           note_number = 1, prompt_name = "twostep", temp_name = "low")
+Sys.sleep(60)
+
+# Gemini Flash (similar to GPT 4o mini); "gemini-1.5-flash"
+run_google(gpt_model = "gemini-1.5-flash", prompt1 = note_1_revised_cot_prompt, temp1 = 0.05,
+           two_step = TRUE, temp2 = 1, prompt2 = second_step_prompt,
+           note_number = 1, prompt_name = "twostep", temp_name = "low")
+Sys.sleep(60)
+
+
+```
+
+
+```{r, message = FALSE, warning = FALSE, eval = FALSE}
+
+###################################################################### 
+# Condition 7 - Two Step Bracket Prompt, Calc Array Step 2, low temp #
+######################################################################
+
+# GPT 4o
+run_openai_pa(gpt_model = "gpt-4o", prompt1 = note_1_bracket_prompt, temp1 = 0.05,
+           two_step = TRUE, temp2 = 1, prompt2 = second_bracket_prompt,
+           note_number = 1, prompt_name = "twostep_bracket", temp_name = "low")
+Sys.sleep(60)
+
+# GPT 4o mini
+run_openai_pa(gpt_model = "gpt-4o-mini", prompt1 = note_1_bracket_prompt, temp1 = 0.05,
+           two_step = TRUE, temp2 = 1, prompt2 = second_bracket_prompt,
+           note_number = 1, prompt_name = "twostep_bracket", temp_name = "low")
+Sys.sleep(60)
+
+
+## Anthropic Models
+
+# Claude Sonnet (similar to GPT 4o); "claude-3-5-sonnet-20240620"
+run_anthropic_pa(gpt_model = "claude-3-5-sonnet-20240620", prompt1 = note_1_bracket_prompt, temp1 = 0.05,
+              two_step = TRUE, temp2 = 1, prompt2 = second_bracket_prompt,
+              note_number = 1, prompt_name = "twostep_bracket", temp_name = "low")
+Sys.sleep(60)
+
+# Claude Haiku (similar to GPT 4o mini): "claude-3-haiku-20240307"
+run_anthropic_pa(gpt_model = "claude-3-haiku-20240307", prompt1 = note_1_bracket_prompt, temp1 = 0.05,
+              two_step = TRUE, temp2 = 1, prompt2 = second_bracket_prompt,
+              note_number = 1, prompt_name = "twostep_bracket", temp_name = "low")
+Sys.sleep(60)
+
+
+## Google Models
+
+# Gemini Pro (similar to GPT 4o); "gemini-1.5-pro"
+run_google_pa(gpt_model = "gemini-1.5-pro", prompt1 = note_1_bracket_prompt, temp1 = 0.05,
+           two_step = TRUE, temp2 = 1, prompt2 = second_bracket_prompt,
+           note_number = 1, prompt_name = "twostep_bracket", temp_name = "low")
+Sys.sleep(60)
+
+# Gemini Flash (similar to GPT 4o mini); "gemini-1.5-flash"
+run_google_pa(gpt_model = "gemini-1.5-flash", prompt1 = note_1_bracket_prompt, temp1 = 0.05,
+           two_step = TRUE, temp2 = 1, prompt2 = second_bracket_prompt,
+           note_number = 1, prompt_name = "twostep_bracket", temp_name = "low")
+Sys.sleep(60)
+
+```
+
