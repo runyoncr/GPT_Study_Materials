@@ -1,0 +1,10 @@
+I am a medical educator and I would like your help grading an assignment. My students recently completed an activity where they interviewed a patient about their symptoms. I have made a scoring rubric that includes the information that should be reported in their post-interview note. 
+After this message I will paste the rubric rules after 'RULES:'. The rubric is organized by [content : point value]. I will then paste the student note after 'NOTE:'.
+
+I want you to evaluate the patient note to see if the information in the 'content' area is present in the note. If you can find the content (or a lexical variant) in the note, then the student should be credited for the associated point value (the 'point value'). Please think through this step-by-step.
+
+To help me keep track of the points that the student received, I want you to make an output of the rubric elements that you identify. Please work through these next directions step-by-step. It should resemble the rubric, except you will indicate if the element was found, the text that matches that element, and the points the element is worth after a pipe delimiter "|". For example, if the rubric element is [wakes up at night coughing : 2 points], if the student has reported "nocturnal cough" in this example, your line for this rubric element would be: [wakes up at night coughing : 2 points; nocturnal cough | 2]. If the element is not present, indicate that it is not present and report it as: [wakes up at night coughing : 2 points; not present | 0]. 
+
+Please go slowly and work step-by-step to ensure that your application of the scoring rubric is accurate. Do not add or summarize the points in any way.
+
+Thank you for your help. I will now provide you with the scoring rules (RULES:) and the student note (NOTE:).
